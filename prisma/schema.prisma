@@ -1,0 +1,95 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// 1. डेटाबेस प्रोवाइडर को कॉन्फ़िगर करना
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 2. Prisma Client जेनरेटर को कॉन्फ़िगर करना
+generator client {
+  provider = "prisma-client-js"
+}
+
+// --- ENUMS (एनम्स) ---
+
+// उपयोगकर्ता की भूमिकाओं (Roles) के लिए Enum
+enum UserRole {
+  ADMIN
+  MANAGER
+  SALES_EXECUTIVE
+}
+
+// 1. Lead (लीड) की स्थिति के लिए Enum
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  LOST
+  WON
+}
+
+// 2. Activity (गतिविधि) के प्रकार के लिए Enum
+enum ActivityType {
+  NOTE
+  CALL
+  MEETING
+  EMAIL
+  STATUS_CHANGE
+}
+
+// --- MODELS (मॉडल्स) ---
+
+// 5. User (उपयोगकर्ता) मॉडल (अपडेटेड)
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      UserRole @default(SALES_EXECUTIVE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations (संबंध)
+  // एक उपयोगकर्ता (User) कई Leads का मालिक (owner) हो सकता है
+  leadsOwned Lead[] @relation("LeadOwner")
+  // एक उपयोगकर्ता (User) कई Activities बना सकता है
+  activities Activity[]
+}
+
+// 3. Lead (लीड) मॉडल
+model Lead {
+  id        String     @id @default(cuid())
+  name      String
+  email     String     @unique
+  phone     String? // '?' का मतलब है यह फ़ील्ड वैकल्पिक (optional) है
+  status    LeadStatus @default(NEW)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  // Relations (संबंध)
+  // हर Lead का एक मालिक (owner) होता है (जो एक User है)
+  ownerId String
+  owner   User   @relation(name: "LeadOwner", fields: [ownerId], references: [id])
+
+  // हर Lead की कई Activities हो सकती हैं
+  activities Activity[]
+}
+
+// 4. Activity (गतिविधि) मॉडल
+model Activity {
+  id        String       @id @default(cuid())
+  type      ActivityType
+  content   String // नोट, मीटिंग का विवरण, आदि।
+  createdAt DateTime     @default(now())
+
+  // Relations (संबंध)
+  // हर Activity एक Lead से जुड़ी होती है
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id])
+
+  // हर Activity एक User द्वारा की जाती है
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+}
